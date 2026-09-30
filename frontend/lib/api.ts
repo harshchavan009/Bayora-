@@ -85,9 +85,30 @@ export async function triggerAuditTamper(): Promise<any> {
   return res.json();
 }
 
+export async function simulateAuditTamperSandbox(): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/audit/simulation/tamper`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to run sandboxed tamper simulation");
+  return res.json();
+}
+
 export async function restoreAuditLedger(): Promise<any> {
   const res = await fetch(`${API_BASE}/api/audit/restore`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to restore audit ledger");
+  return res.json();
+}
+
+export async function generateCapabilityToken(payload: {
+  name: string;
+  role: string;
+  tenant: string;
+  scopes: string[];
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/access/tokens/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Failed to generate token");
   return res.json();
 }
 

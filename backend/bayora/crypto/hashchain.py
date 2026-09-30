@@ -61,10 +61,10 @@ class HashChain:
         if self.blocks:
             return self.blocks[0]
 
-        timestamp = 1700000000.0  # Deterministic reference epoch
+        timestamp = time.time()  # Live server clock in UTC
         payload_hash = hashlib.sha256(b"BAYORA_GENESIS_ROOT_V1").hexdigest()
         prev_hash = "0" * 64
-        metadata = {"version": "1.0", "system": "bayora-provenance"}
+        metadata = {"version": "1.0", "system": "bayora-provenance", "clock": "server_utc"}
 
         block_hash = compute_block_hash(0, timestamp, "GENESIS", "system", payload_hash, metadata, prev_hash)
         signature = sign_message(self.private_key, block_hash.encode("ascii")) if self.private_key else "UNSIGNED"

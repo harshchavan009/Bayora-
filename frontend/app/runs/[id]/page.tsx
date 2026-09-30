@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   Shield, Lock, Cpu, Database, CheckCircle2, AlertTriangle, 
-  ArrowLeft, RefreshCw, KeyRound, Clock, Eye, FileCheck2, Unlock
+  ArrowLeft, RefreshCw, KeyRound, Clock, Eye, FileCheck2, Unlock, Info
 } from "lucide-react";
 import { useRole } from "@/components/RoleContext";
 import { fetchRunDetail, revealRunPayload, verifyRunIndependently } from "@/lib/api";
@@ -66,17 +66,18 @@ export default function RunDetailPage() {
   if (loading && !data) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <RefreshCw className="h-6 w-6 animate-spin text-cyan-400" />
+        <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!data?.run) {
     return (
-      <div className="rounded-xl cyber-panel p-8 text-center space-y-4">
-        <AlertTriangle className="h-8 w-8 text-amber-400 mx-auto" />
-        <h2 className="text-lg font-bold text-white">Test Run Not Found</h2>
-        <Link href="/dashboard" className="text-xs text-cyan-400 hover:underline">
+      <div className="rounded-lg border border-border bg-card p-8 text-center space-y-3 max-w-lg mx-auto mt-12">
+        <AlertTriangle className="h-6 w-6 text-amber-500 mx-auto" />
+        <h2 className="text-base font-semibold text-foreground">Test Run Not Found</h2>
+        <p className="text-xs text-muted-foreground">The requested evaluation record does not exist or has expired.</p>
+        <Link href="/dashboard" className="text-xs text-foreground font-medium underline inline-block">
           Return to Dashboard
         </Link>
       </div>
@@ -86,41 +87,41 @@ export default function RunDetailPage() {
   const { run, payload_view, defense_view, audit_blocks, merkle_root } = data;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-slate-400 hover:text-white mb-2 transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-1.5 transition-colors"
           >
             <ArrowLeft className="h-3 w-3" /> Back to Dashboard
           </Link>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-white">{run.name}</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">{run.name}</h1>
             <span
-              className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
+              className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
                 run.status === "RUNNING"
-                  ? "bg-amber-950 text-amber-300 border border-amber-800"
-                  : "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
               }`}
             >
               {run.status}
             </span>
           </div>
-          <p className="text-xs font-mono text-slate-400 mt-1">
-            Run ID: <span className="text-cyan-400">{run.run_id}</span> • Target: {run.target_model}
+          <p className="text-xs text-muted-foreground mt-1">
+            Run ID: <span className="font-mono text-foreground">{run.run_id}</span> • Target Model: {run.target_model}
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3">
-          {/* Reveal button (shown if unrevealed) */}
+        <div className="flex items-center gap-2">
+          {/* Reveal button */}
           {!run.is_revealed && (role === "red" || role === "admin") && (
             <button
               onClick={handleReveal}
               disabled={revealing}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-700 hover:bg-rose-600 text-white font-medium text-xs shadow-md transition-all font-mono"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary hover:bg-secondary/80 text-foreground text-xs font-medium transition-colors"
             >
               <Unlock className="h-3.5 w-3.5" />
               {revealing ? "Revealing..." : "Conclude & Reveal Payload"}
@@ -131,70 +132,77 @@ export default function RunDetailPage() {
           <button
             onClick={handleVerify}
             disabled={verifying}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-md transition-all font-mono"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-foreground text-background hover:bg-foreground/90 text-xs font-medium transition-colors shadow-sm"
           >
             <FileCheck2 className="h-3.5 w-3.5" />
-            {verifying ? "Verifying Proofs..." : "Verify Run Independently"}
+            {verifying ? "Verifying..." : "Verify Run Independently"}
           </button>
         </div>
       </div>
 
       {/* Role-Based Redaction Notice Banner */}
-      <div className="rounded-xl p-4 bg-slate-950 border border-slate-800 flex items-start gap-3">
-        <Eye className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />
-        <div className="text-xs space-y-1">
-          <div className="text-slate-200 font-semibold font-mono flex items-center gap-2">
-            VIEWER ROLE: <span className="text-cyan-400 uppercase">{role}</span>
+      <div className="rounded-lg p-3.5 bg-secondary/30 border border-border flex items-start gap-3 text-xs">
+        <Eye className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <div className="text-foreground font-medium flex items-center gap-2">
+            Active Preview Role: <span className="font-mono uppercase text-foreground">{role}</span>
             {payload_view.is_redacted ? (
-              <span className="text-[10px] px-2 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800">
-                PAYLOAD REDACTED
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium">
+                Payload Redacted
               </span>
             ) : (
-              <span className="text-[10px] px-2 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                PAYLOAD VISIBLE
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium">
+                Payload Visible
               </span>
             )}
           </div>
-          <p className="text-slate-400">
-            {payload_view.reason} Use the Role Switcher in the top navigation bar to observe how Bayora enforces zero early leakage across roles.
+          <p className="text-muted-foreground leading-relaxed">
+            {payload_view.reason} Toggle "Preview as role" in the top bar to test how Bayora prevents early adversarial insight across role boundaries.
           </p>
         </div>
       </div>
 
       {/* Multi-Party Exchange Timeline */}
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">
-          Adversarial Validation Lifecycle (5-Stage Pipeline)
-        </h2>
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">
+            Adversarial Validation Exchange Timeline (5 Stages)
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Step-by-step cryptographic validation lifecycle from red payload commit to Merkle provenance.
+          </p>
+        </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Step 1: Red Payload Commitment */}
-          <div className="rounded-xl cyber-panel p-5 border border-rose-900/40 space-y-3">
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-950 text-rose-300 text-xs font-mono font-bold border border-rose-800">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-foreground text-[11px] font-mono font-medium border border-border">
                   1
                 </span>
-                <h3 className="text-sm font-bold text-white">Red Team — Sealed Payload Commitment</h3>
+                <h3 className="text-xs font-semibold text-foreground">Red Team — Sealed Payload Commitment</h3>
               </div>
-              <span className="text-xs font-mono text-rose-400">Tenant: RED</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono">
+                Tenant: Red
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
               <div className="space-y-1">
-                <div className="text-slate-400">Commitment SHA-256 Hash:</div>
-                <div className="p-2.5 rounded bg-slate-950 text-cyan-400 border border-slate-800 break-all select-all">
+                <div className="text-muted-foreground text-[10px]">COMMITMENT SHA-256 HASH:</div>
+                <div className="p-2 rounded bg-secondary/40 text-foreground border border-border break-all select-all text-[11px]">
                   {run.commitment_hash}
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-slate-400">Payload State ({role.toUpperCase()} View):</div>
+                <div className="text-muted-foreground text-[10px]">PAYLOAD VIEW ({role.toUpperCase()}):</div>
                 <div
-                  className={`p-2.5 rounded border break-words ${
+                  className={`p-2 rounded border break-words text-[11px] ${
                     payload_view.is_redacted
-                      ? "bg-amber-950/20 text-amber-400 border-amber-800/40"
-                      : "bg-slate-950 text-slate-200 border-slate-800"
+                      ? "bg-amber-500/5 text-amber-700 dark:text-amber-300 border-amber-500/20"
+                      : "bg-secondary/40 text-foreground border border-border"
                   }`}
                 >
                   {payload_view.display_text}
@@ -202,129 +210,137 @@ export default function RunDetailPage() {
               </div>
             </div>
 
-            <div className="text-[11px] text-slate-400 font-mono">
-              Status: {run.is_revealed ? "✓ Revealed and Cryptographically Verified" : "🔒 Sealed under commitment hash"}
+            <div className="text-[11px] text-muted-foreground">
+              Status: {run.is_revealed ? "✓ Revealed and cryptographically verified" : "🔒 Sealed under commitment hash; unrevealed to defenders"}
             </div>
           </div>
 
           {/* Step 2: Policy Gateway & Timing Defense */}
-          <div className="rounded-xl cyber-panel p-5 border border-indigo-900/40 space-y-3">
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-950 text-indigo-300 text-xs font-mono font-bold border border-indigo-800">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-foreground text-[11px] font-mono font-medium border border-border">
                   2
                 </span>
-                <h3 className="text-sm font-bold text-white">Policy Gateway — Governance & Timing Side-Channel Defense</h3>
+                <h3 className="text-xs font-semibold text-foreground">Policy Gateway — Constant-Time Padding</h3>
               </div>
-              <span className="text-xs font-mono text-indigo-400">Multi-Homed Bridge</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono">
+                Multi-Homed Proxy
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
-              <div className="p-3 rounded bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 text-[10px]">RAW EXECUTION TIME</span>
-                <div className="text-sm font-bold text-slate-200">{run.execution_time_ms} ms</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="p-2.5 rounded bg-secondary/30 border border-border">
+                <span className="text-muted-foreground text-[10px] block">Raw Execution Latency</span>
+                <span className="text-sm font-semibold text-foreground font-mono">{run.execution_time_ms} ms</span>
               </div>
-              <div className="p-3 rounded bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 text-[10px]">QUANTUM BUCKET PADDING</span>
-                <div className="text-sm font-bold text-cyan-400">{run.padded_time_ms} ms</div>
+              <div className="p-2.5 rounded bg-secondary/30 border border-border">
+                <span className="text-muted-foreground text-[10px] block">Observable Padded Latency</span>
+                <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 font-mono">{run.padded_time_ms} ms</span>
               </div>
-              <div className="p-3 rounded bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 text-[10px]">TIMING DEFENSE</span>
-                <div className="text-sm font-bold text-emerald-400">Constant-Time Quantized</div>
+              <div className="p-2.5 rounded bg-secondary/30 border border-border">
+                <span className="text-muted-foreground text-[10px] block">Timing Channel Protection</span>
+                <span className="text-sm font-semibold text-foreground font-mono">Quantized Quantum</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400">
-              Gateway normalized response latency into a discrete quantum tier to prevent Red from measuring Blue classifier execution depth.
+            <p className="text-[11px] text-muted-foreground">
+              Gateway padded completion duration into discrete quantum intervals, suppressing classifier execution depth leakage.
             </p>
           </div>
 
           {/* Step 3: Blue Defensive Countermeasures */}
-          <div className="rounded-xl cyber-panel p-5 border border-cyan-900/40 space-y-3">
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-950 text-cyan-300 text-xs font-mono font-bold border border-cyan-800">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-foreground text-[11px] font-mono font-medium border border-border">
                   3
                 </span>
-                <h3 className="text-sm font-bold text-white">Blue Team — Defensive Guardrail Interception</h3>
+                <h3 className="text-xs font-semibold text-foreground">Blue Team — Defense Filter Interception</h3>
               </div>
-              <span className="text-xs font-mono text-cyan-400">Tenant: BLUE</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono">
+                Tenant: Blue
+              </span>
             </div>
 
-            <div className="p-3 rounded bg-slate-950 border border-slate-800 space-y-2 text-xs font-mono">
+            <div className="p-3 rounded bg-secondary/30 border border-border space-y-1.5 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Defense Evaluation Verdict:</span>
+                <span className="text-muted-foreground">Evaluation Verdict:</span>
                 <span
-                  className={`font-bold ${
-                    run.blue_defense_triggered ? "text-cyan-400" : "text-slate-400"
+                  className={`font-semibold ${
+                    run.blue_defense_triggered ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
                   }`}
                 >
-                  {run.blue_defense_triggered ? "DEFENSE TRIGGERED & INTERCEPTED" : "PASSED UNFILTERED"}
+                  {run.blue_defense_triggered ? "Defense Triggered & Intercepted" : "Passed Unfiltered"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Heuristic Rule Name ({role.toUpperCase()} View):</span>
-                <span className="text-slate-200">{defense_view.display_text}</span>
+                <span className="text-muted-foreground">Active Filter Heuristic ({role.toUpperCase()} View):</span>
+                <span className="font-mono text-foreground text-[11px]">{defense_view.display_text}</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400">
-              If role is Red, rule names are masked to prevent probing classifier boundaries.
+            <p className="text-[11px] text-muted-foreground">
+              Red team view masks internal heuristic rules to prevent adversarial boundary probing.
             </p>
           </div>
 
           {/* Step 4: Model Under Test Sandbox */}
-          <div className="rounded-xl cyber-panel p-5 border border-emerald-900/40 space-y-3">
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-950 text-emerald-300 text-xs font-mono font-bold border border-emerald-800">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-foreground text-[11px] font-mono font-medium border border-border">
                   4
                 </span>
-                <h3 className="text-sm font-bold text-white">Model Under Test — Isolated Inference Sandbox</h3>
+                <h3 className="text-xs font-semibold text-foreground">Model Under Test — Sandbox Completion</h3>
               </div>
-              <span className="text-xs font-mono text-emerald-400">Isolated Sandbox</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono">
+                Target Sandbox
+              </span>
             </div>
 
-            <div className="space-y-2 text-xs font-mono">
-              <div className="text-slate-400">Model Sanitized Response:</div>
-              <div className="p-3 rounded bg-slate-950 border border-slate-800 text-slate-200">
+            <div className="space-y-2 text-xs">
+              <div className="text-muted-foreground text-[10px]">MODEL SANITIZED COMPLETION:</div>
+              <div className="p-3 rounded bg-secondary/30 border border-border text-foreground font-mono text-[11px]">
                 {run.model_response_text || "[Pending or intercepted by Blue defense]"}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <div className="p-2 rounded bg-slate-950/80 border border-slate-800 flex items-center justify-between">
-                  <span className="text-slate-400">Canary String Injected:</span>
-                  <span className="text-cyan-400 text-[11px]">{run.canary_token_str || "CANARY_ACTIVE"}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px]">
+                <div className="p-2 rounded bg-secondary/20 border border-border flex items-center justify-between">
+                  <span className="text-muted-foreground">Egress Canary Injected:</span>
+                  <span className="font-mono text-foreground">{run.canary_token_str || "CANARY_ACTIVE"}</span>
                 </div>
-                <div className="p-2 rounded bg-slate-950/80 border border-slate-800 flex items-center justify-between">
-                  <span className="text-slate-400">KV-Cache Eviction:</span>
-                  <span className="text-emerald-400 text-[11px]">FLUSHED & ZEROED</span>
+                <div className="p-2 rounded bg-secondary/20 border border-border flex items-center justify-between">
+                  <span className="text-muted-foreground">KV-Cache State:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Flushed & Zeroed</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Step 5: Cryptographic Provenance */}
-          <div className="rounded-xl cyber-panel p-5 border border-purple-900/40 space-y-3">
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-950 text-purple-300 text-xs font-mono font-bold border border-purple-800">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-foreground text-[11px] font-mono font-medium border border-border">
                   5
                 </span>
-                <h3 className="text-sm font-bold text-white">Audit & Provenance — Ed25519 Signed Merkle Root</h3>
+                <h3 className="text-xs font-semibold text-foreground">Audit & Provenance — Ed25519 Signed Merkle Root</h3>
               </div>
-              <span className="text-xs font-mono text-purple-400">Cryptographic Proof</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono">
+                Cryptographic Attestation
+              </span>
             </div>
 
-            <div className="space-y-2 text-xs font-mono">
-              <div className="text-slate-400">Merkle Tree Root Hash:</div>
-              <div className="p-2.5 rounded bg-slate-950 text-purple-300 border border-slate-800 break-all select-all">
+            <div className="space-y-1 text-xs font-mono">
+              <div className="text-muted-foreground text-[10px]">DERIVED MERKLE ROOT:</div>
+              <div className="p-2 rounded bg-secondary/40 text-foreground border border-border break-all select-all text-[11px]">
                 {merkle_root || "COMPUTED_POST_RUN_CHECKPOINT"}
               </div>
             </div>
 
-            <div className="text-[11px] text-slate-400 flex items-center gap-2 font-mono">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+            <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
               <span>{audit_blocks?.length ?? 5} Audit Blocks Hash-Chained with zero breaks</span>
             </div>
           </div>
@@ -333,65 +349,70 @@ export default function RunDetailPage() {
 
       {/* Verification Modal */}
       {verifyReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="rounded-2xl cyber-panel border border-indigo-500/40 p-6 max-w-xl w-full space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <FileCheck2 className="h-4 w-4 text-cyan-400" />
-                Independent Cryptographic Verification Report
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="rounded-lg border border-border bg-card p-6 max-w-xl w-full space-y-4 max-h-[85vh] overflow-y-auto shadow-xl">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <FileCheck2 className="h-4 w-4 text-muted-foreground" />
+                  Independent Cryptographic Verification Report
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Automated verification of Ed25519 signatures, hash continuity, and Merkle root.
+                </p>
+              </div>
               <button
                 onClick={() => setVerifyReport(null)}
-                className="text-slate-400 hover:text-white text-sm"
+                className="text-muted-foreground hover:text-foreground text-sm font-semibold"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3 text-xs font-mono">
-              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
-                <span>Overall Verdict:</span>
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-md bg-secondary/30 border border-border flex items-center justify-between">
+                <span className="text-muted-foreground">Overall Verification Verdict:</span>
                 <span
-                  className={`font-bold px-2 py-0.5 rounded ${
+                  className={`font-semibold px-2 py-0.5 rounded text-[11px] border ${
                     verifyReport.overall_valid
-                      ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                      : "bg-rose-950 text-rose-300 border border-rose-800"
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
                   }`}
                 >
-                  {verifyReport.overall_valid ? "CRYPTOGRAPHICALLY VALID" : "TAMPER DETECTED"}
+                  {verifyReport.overall_valid ? "Cryptographically Valid" : "Tamper Detected"}
                 </span>
               </div>
 
-              <div className="space-y-2">
-                <span className="text-slate-400 uppercase text-[10px] tracking-wider">
+              <div className="space-y-1.5">
+                <div className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">
                   Verification Assertions
-                </span>
+                </div>
                 {verifyReport.steps.map((st, i) => (
-                  <div key={i} className="p-2.5 rounded bg-slate-950 border border-slate-800/80 space-y-1">
+                  <div key={i} className="p-2.5 rounded bg-secondary/20 border border-border space-y-0.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-200 font-semibold">{st.check_name}</span>
-                      <span className={st.status === "PASSED" ? "text-emerald-400" : "text-rose-400"}>
-                        [{st.status}]
+                      <span className="font-medium text-foreground">{st.check_name}</span>
+                      <span className={`font-mono text-[11px] font-medium ${st.status === "PASSED" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                        {st.status}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-400">{st.details}</div>
+                    <p className="text-[11px] text-muted-foreground">{st.details}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="p-3 rounded bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                <div>Public Key: {verifyReport.public_key_b64.slice(0, 24)}...</div>
+              <div className="p-2.5 rounded bg-secondary/30 border border-border text-[11px] font-mono text-muted-foreground space-y-1">
+                <div>Public Key: {verifyReport.public_key_b64?.slice(0, 28)}...</div>
                 <div>Blocks Audited: {verifyReport.total_blocks_checked}</div>
                 {verifyReport.merkle_root && (
-                  <div>Derived Root: {verifyReport.merkle_root.slice(0, 32)}...</div>
+                  <div>Derived Root: {verifyReport.merkle_root?.slice(0, 32)}...</div>
                 )}
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-2 border-t border-border">
               <button
                 onClick={() => setVerifyReport(null)}
-                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono"
+                className="px-3 py-1.5 rounded-md bg-foreground text-background hover:bg-foreground/90 text-xs font-medium"
               >
                 Close Report
               </button>
