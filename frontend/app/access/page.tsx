@@ -1,456 +1,587 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Lock, Shield, KeyRound, AlertOctagon, CheckCircle2, Plus, Copy, Check, EyeOff, Info } from "lucide-react";
+import { 
+  Users, Shield, KeyRound, Lock, AlertOctagon, CheckCircle2, 
+  Plus, Copy, Check, EyeOff, Info, Trash2, Mail, ShieldAlert, 
+  X, CheckSquare, Square, ChevronRight, UserPlus
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Tabs } from "@/components/ui/Tabs";
+import { Modal } from "@/components/ui/Modal";
+import { HashBlock } from "@/components/ui/HashBlock";
 import { fetchCapabilities, generateCapabilityToken } from "@/lib/api";
+import { apiGetMembers, apiInviteMember } from "@/lib/auth";
+
+interface Member {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  joined_at: string;
+  status: "active" | "invited";
+}
+
+interface ApiKeyItem {
+  id: string;
+  name: string;
+  maskedKey: string;
+  role: string;
+  tenant: string;
+  createdAt: string;
+  lastUsed: string;
+}
 
 export default function AccessControlPage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [newTokenName, setNewTokenName] = useState("");
-  const [newTokenRole, setNewTokenRole] = useState("red_lead");
-  const [newTokenTenant, setNewTokenTenant] = useState("red");
-  const [newTokenScopes, setNewTokenScopes] = useState("payload:commit,payload:reveal");
-  const [generatedResult, setGeneratedResult] = useState<any>(null);
-  const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("members");
+  const [members, setMembers] = useState<Member[]>([
+    { id: "usr-1", email: "owner@bayora.io", name: "Sarah Lin (Owner)", role: "owner", joined_at: "2026-09-01", status: "active" },
+    { id: "usr-2", email: "admin@bayora.io", name: "David Chen (Admin)", role: "admin", joined_at: "2026-09-05", status: "active" },
+    { id: "usr-3", email: "red@bayora.io", name: "Alex Mercer (Red Team Lead)", role: "red", joined_at: "2026-09-10", status: "active" },
+    { id: "usr-4", email: "blue@bayora.io", name: "Elena Rostova (Blue Team Lead)", role: "blue", joined_at: "2026-09-12", status: "active" },
+    { id: "usr-5", email: "auditor@bayora.io", name: "Marcus Brody (Auditor)", role: "auditor", joined_at: "2026-09-15", status: "active" },
+    { id: "usr-6", email: "viewer@bayora.io", name: "Jordan Bell (Viewer)", role: "viewer", joined_at: "2026-09-20", status: "active" },
+  ]);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const res = await fetchCapabilities();
-      setData(res);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([
+    { id: "key-1", name: "CI/CD GitHub Actions Runner", maskedKey: "byr_live_••••••••9a2f", role: "red", tenant: "red", createdAt: "2026-09-25", lastUsed: "14 mins ago" },
+    { id: "key-2", name: "Blue Defense Evaluation Hook", maskedKey: "byr_live_••••••••81bc", role: "blue", tenant: "blue", createdAt: "2026-09-27", lastUsed: "2 hours ago" },
+    { id: "key-3", name: "Compliance Ledger Verifier Agent", maskedKey: "byr_live_••••••••c4e7", role: "auditor", tenant: "system", createdAt: "2026-09-28", lastUsed: "Yesterday" },
+  ]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Modals state
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("viewer");
 
-  const handleGenerate = async (e: React.FormEvent) => {
+  const [createKeyModalOpen, setCreateKeyModalOpen] = useState(false);
+  const [keyName, setKeyName] = useState("");
+  const [keyRole, setKeyRole] = useState("red");
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+
+  const [denials, setDenials] = useState([
+    { id: "den-1", actor: "blue_team_svc", action: "payload:read", target: "run-active-002", reason: "Payload sealed until conclusion", time: "18m ago" },
+    { id: "den-2", actor: "red_lead_usr", action: "defense:read_weights", target: "classifier_v2", reason: "Defense model opacity invariant", time: "1h ago" },
+    { id: "den-3", actor: "guest_probe", action: "network:direct_connect", target: "bayora-model-net", reason: "Direct route dropped by bridge firewall", time: "3h ago" },
+  ]);
+
+  const tabs = [
+    { id: "members", label: "Members & Teams" },
+    { id: "roles", label: "Roles & Permissions Matrix" },
+    { id: "policies", label: "ABAC Security Invariants" },
+    { id: "keys", label: "API Keys & Service Tokens" },
+    { id: "denials", label: "Recent Denials" },
+  ];
+
+  const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const scopes = newTokenScopes.split(",").map((s) => s.trim()).filter(Boolean);
-      const result = await generateCapabilityToken({
-        name: newTokenName || "Ad-hoc CI Runner Token",
-        role: newTokenRole,
-        tenant: newTokenTenant,
-        scopes,
-      });
-      setGeneratedResult(result);
-      loadData();
-    } catch (err) {
-      console.error("Token generation failed", err);
-    }
+    if (!inviteEmail) return;
+    const newMember: Member = {
+      id: `usr-${Date.now()}`,
+      email: inviteEmail,
+      name: inviteEmail.split("@")[0],
+      role: inviteRole,
+      joined_at: new Date().toISOString().slice(0, 10),
+      status: "invited",
+    };
+    setMembers((prev) => [...prev, newMember]);
+    setInviteModalOpen(false);
+    setInviteEmail("");
   };
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCreateKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!keyName) return;
+    const secret = `byr_live_${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}`;
+    const newKey: ApiKeyItem = {
+      id: `key-${Date.now()}`,
+      name: keyName,
+      maskedKey: `${secret.slice(0, 9)}••••••••${secret.slice(-4)}`,
+      role: keyRole,
+      tenant: keyRole === "blue" ? "blue" : keyRole === "red" ? "red" : "system",
+      createdAt: new Date().toISOString().slice(0, 10),
+      lastUsed: "Just created",
+    };
+    setApiKeys((prev) => [newKey, ...prev]);
+    setGeneratedKey(secret);
   };
 
-  const policies = [
-    {
-      name: "Zero Early Redaction Leakage",
-      target: "Payload Resource",
-      rule: "Tenant Blue is denied permission to read raw payload ciphertext while run phase is RUNNING.",
-      invariant: "Prevents Blue defense team from tuning filters before run concludes.",
-      assumption: "Enforced at gateway proxy via token claims; assumes gateway network integrity."
-    },
-    {
-      name: "Defense Logic Opacity",
-      target: "Defense Rules",
-      rule: "Tenant Red is denied permission to inspect classifier heuristics, weights, or regex strings.",
-      invariant: "Prevents Red adversarial team from gradient or regex probing of defenses.",
-      assumption: "Enforced via RBAC/ABAC role separation; assumes no shared container volumes."
-    },
-    {
-      name: "Gateway Proxy Enforcement",
-      target: "Model Endpoint",
-      rule: "Direct network invocation to model sandbox is denied for Red and Blue. Gateway proxy required.",
-      invariant: "Guarantees all model interactions pass through rate limits, fair queue, and timing padding.",
-      assumption: "Docker bridge subnets restrict egress to 172.28.0.10:8000 only."
-    },
-    {
-      name: "Immutable Audit Ledger",
-      target: "Audit Log",
-      rule: "Actions 'tamper', 'delete', or 'truncate' are unconditionally denied for all roles.",
-      invariant: "Preserves legal provenance and non-repudiation of safety findings.",
-      assumption: "Append-only hash chain with Ed25519 signatures; verified by external observers."
-    }
+  const permissionsMatrix = [
+    { permission: "Launch Adversarial Evaluations", roles: { owner: true, admin: true, red: true, blue: false, auditor: false, viewer: false } },
+    { permission: "Unseal Red Team Payloads", roles: { owner: true, admin: true, red: true, blue: false, auditor: true, viewer: false } },
+    { permission: "Configure Blue Countermeasures", roles: { owner: true, admin: true, red: false, blue: true, auditor: false, viewer: false } },
+    { permission: "Verify Cryptographic Ledger", roles: { owner: true, admin: true, red: true, blue: true, auditor: true, viewer: true } },
+    { permission: "Export Findings & Evidence Bundles", roles: { owner: true, admin: true, red: true, blue: true, auditor: true, viewer: false } },
+    { permission: "Manage Team Members & API Keys", roles: { owner: true, admin: true, red: false, blue: false, auditor: false, viewer: false } },
+    { permission: "View As Role Preview (Simulation)", roles: { owner: true, admin: true, red: false, blue: false, auditor: false, viewer: false } },
   ];
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Access Governance & Attribute-Based Policies
-            </h1>
-            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border">
-              ABAC Engine
-            </span>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium text-muted">Governance</span>
+            <span className="text-border">/</span>
+            <span className="text-xs text-foreground font-medium">Access & Team</span>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            HMAC-SHA256 scoped capability tokens, credential masking, and tenant separation invariants.
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Access Control & RBAC
+          </h1>
+          <p className="text-xs text-muted mt-0.5">
+            Manage workspace members, role permissions, attribute-based policy rules, and API keys.
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setGeneratedResult(null);
-            setShowModal(true);
-          }}
-          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-foreground text-background hover:bg-foreground/90 transition-colors shadow-sm"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Issue Capability Token
-        </button>
-      </div>
+        <div className="flex items-center gap-2">
+          {activeTab === "members" && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setInviteModalOpen(true)}
+            >
+              <UserPlus className="h-4 w-4 mr-1.5" />
+              Invite teammate
+            </Button>
+          )}
 
-      {/* Scoped Capability Tokens Table */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <KeyRound className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">Active Capability Tokens</h2>
-            <span className="text-[11px] text-muted-foreground">
-              (Plaintext hidden; masked prefix display only)
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <Shield className="h-3.5 w-3.5 text-emerald-500" />
-            <span>Tokens displayed once at creation</span>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left border-collapse">
-            <thead className="bg-secondary/40 border-b border-border text-muted-foreground font-medium">
-              <tr>
-                <th className="py-2.5 px-4 font-normal">Token Name / ID</th>
-                <th className="py-2.5 px-4 font-normal">Tenant / Role</th>
-                <th className="py-2.5 px-4 font-normal">Masked Token</th>
-                <th className="py-2.5 px-4 font-normal">Authorized Scopes</th>
-                <th className="py-2.5 px-4 font-normal">Created / Expires</th>
-                <th className="py-2.5 px-4 font-normal text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {(data?.active_tokens || [
-                {
-                  id: "tok-red-01",
-                  name: "Red Team Lead Runner",
-                  tenant: "red",
-                  role: "red_lead",
-                  masked_token: "bayora_tok_9f3a...b8c1",
-                  scopes: ["payload:commit", "payload:reveal", "payload:read_raw"],
-                  created_at: 1790792000,
-                  expires_in_hours: 24,
-                  status: "Active"
-                },
-                {
-                  id: "tok-blue-01",
-                  name: "Blue Defense Automated Classifier",
-                  tenant: "blue",
-                  role: "blue_lead",
-                  masked_token: "bayora_tok_7c41...e2f9",
-                  scopes: ["defense:execute", "defense:inspect_rules"],
-                  created_at: 1790792000,
-                  expires_in_hours: 24,
-                  status: "Active"
-                },
-                {
-                  id: "tok-auditor-01",
-                  name: "External Auditor Read-Only Token",
-                  tenant: "auditor",
-                  role: "auditor",
-                  masked_token: "bayora_tok_1a8d...f403",
-                  scopes: ["audit:read", "audit:verify"],
-                  created_at: 1790792000,
-                  expires_in_hours: 72,
-                  status: "Active"
-                }
-              ]).map((tok: any) => (
-                <tr key={tok.id} className="hover:bg-secondary/20 transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="font-medium text-foreground">{tok.name}</div>
-                    <div className="text-[11px] text-muted-foreground font-mono">{tok.id}</div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="inline-block px-1.5 py-0.5 rounded text-[11px] font-medium bg-secondary text-foreground border border-border">
-                      {tok.tenant} / {tok.role}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-mono text-[11px] text-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <EyeOff className="h-3 w-3 text-muted-foreground" />
-                      <span>{tok.masked_token}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex flex-wrap gap-1">
-                      {tok.scopes?.map((sc: string) => (
-                        <span key={sc} className="px-1.5 py-0.5 rounded bg-secondary text-muted-foreground text-[10px] font-mono border border-border">
-                          {sc}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-muted-foreground text-[11px]" suppressHydrationWarning>
-                    <div suppressHydrationWarning>{tok.created_at ? new Date(tok.created_at * 1000).toLocaleDateString() : "Just now"}</div>
-                    <div className="text-[10px] text-muted-foreground">Expires: +{tok.expires_in_hours || 24}h</div>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      {tok.status || "Active"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ABAC Policy Invariants */}
-      <div className="rounded-lg border border-border bg-card p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">
-              Attribute-Based Access Control (ABAC) Policy Invariants
-            </h2>
-          </div>
-          <span className="text-[11px] text-muted-foreground">
-            Strict Multi-Tenant Separation Rules
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {policies.map((p, i) => (
-            <div key={i} className="p-3.5 rounded-md border border-border bg-secondary/20 space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-foreground">{p.name}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono border border-border">
-                  {p.target}
-                </span>
-              </div>
-              <p className="text-foreground/90 font-mono text-[11px] leading-relaxed bg-background/50 p-2 rounded border border-border">
-                {p.rule}
-              </p>
-              <div className="space-y-1 pt-1 text-[11px]">
-                <p className="text-muted-foreground">
-                  <strong className="text-foreground">Invariant:</strong> {p.invariant}
-                </p>
-                <p className="text-muted-foreground/80 text-[10px] flex items-center gap-1">
-                  <Info className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <span>Assumption: {p.assumption}</span>
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent Access Denials Stream */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertOctagon className="h-4 w-4 text-amber-500" />
-            <h2 className="text-sm font-semibold text-foreground">
-              Recent Policy Denials ({data?.recent_denials?.length ?? 0} Logged)
-            </h2>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            Audit-backed security denials
-          </span>
-        </div>
-
-        <div className="divide-y divide-border text-xs">
-          {data?.recent_denials?.length ? (
-            data.recent_denials.map((d: any, idx: number) => (
-              <div key={idx} className="p-3.5 hover:bg-secondary/20 transition-colors space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-medium border border-rose-500/20">
-                      DENIED
-                    </span>
-                    <span className="text-foreground font-medium">
-                      Subject: {d.subject?.user_id} ({d.subject?.tenant})
-                    </span>
-                    <span className="text-muted-foreground">→ Action: {d.action}</span>
-                  </div>
-                  <span className="text-[11px] text-muted-foreground font-mono" suppressHydrationWarning>
-                    {new Date(d.evaluated_at * 1000).toLocaleTimeString()}
-                  </span>
-                </div>
-                <p className="text-[11px] text-muted-foreground pl-1">{d.reason}</p>
-              </div>
-            ))
-          ) : (
-            <div className="p-8 text-center text-muted-foreground text-xs">
-              No recent unauthorized access attempts. All evaluated requests conformed to policy bounds.
-            </div>
+          {activeTab === "keys" && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setGeneratedKey(null);
+                setCreateKeyModalOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Create API key
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Issue Token Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div>
-                <h3 className="text-base font-semibold text-foreground">Issue Scoped Capability Token</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Generates an HMAC-signed token with bounded permissions and explicit lifetime.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-muted-foreground hover:text-foreground text-sm font-semibold"
-              >
-                ✕
-              </button>
-            </div>
+      {/* Tabs */}
+      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-            {!generatedResult ? (
-              <form onSubmit={handleGenerate} className="space-y-4 text-xs">
-                <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Token Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. CI Nightly Red Runner"
-                    value={newTokenName}
-                    onChange={(e) => setNewTokenName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-secondary/50 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-foreground"
-                  />
-                </div>
+      {/* Tab 1: Members */}
+      {activeTab === "members" && (
+        <div className="rounded-lg border border-border bg-surface-1 overflow-hidden shadow-subtle">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-surface-2 text-muted border-b border-border font-medium">
+                <tr>
+                  <th className="py-2.5 px-3">Member</th>
+                  <th className="py-2.5 px-3">Email</th>
+                  <th className="py-2.5 px-3">Role</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3">Joined</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {members.map((m) => (
+                  <tr key={m.id} className="hover:bg-surface-2/60 transition-colors">
+                    <td className="py-3 px-3 font-medium text-foreground">
+                      {m.name}
+                    </td>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-foreground mb-1">Tenant Group</label>
-                    <select
-                      value={newTokenTenant}
-                      onChange={(e) => setNewTokenTenant(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md border border-border bg-secondary/50 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-foreground"
-                    >
-                      <option value="red">Red Team (Adversarial)</option>
-                      <option value="blue">Blue Team (Defense)</option>
-                      <option value="auditor">Auditor (Governance)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-foreground mb-1">Assigned Role</label>
-                    <select
-                      value={newTokenRole}
-                      onChange={(e) => setNewTokenRole(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md border border-border bg-secondary/50 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-foreground"
-                    >
-                      <option value="red_lead">Red Team Lead</option>
-                      <option value="red_operator">Red Operator</option>
-                      <option value="blue_lead">Blue Team Lead</option>
-                      <option value="blue_engineer">Blue Engineer</option>
-                      <option value="auditor">Auditor</option>
-                    </select>
-                  </div>
-                </div>
+                    <td className="py-3 px-3 font-mono text-[11px] text-muted">
+                      {m.email}
+                    </td>
 
-                <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">
-                    Scopes (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newTokenScopes}
-                    onChange={(e) => setNewTokenScopes(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md border border-border bg-secondary/50 text-foreground text-xs font-mono focus:outline-none focus:ring-1 focus:ring-foreground"
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Available: payload:commit, payload:reveal, payload:read_raw, defense:execute, defense:inspect_rules, audit:read, audit:verify
-                  </p>
-                </div>
+                    <td className="py-3 px-3">
+                      <Badge
+                        variant={
+                          m.role === "owner"
+                            ? "accent"
+                            : m.role === "admin"
+                            ? "info"
+                            : m.role === "red"
+                            ? "danger"
+                            : m.role === "blue"
+                            ? "info"
+                            : m.role === "auditor"
+                            ? "warning"
+                            : "neutral"
+                        }
+                      >
+                        {m.role.toUpperCase()}
+                      </Badge>
+                    </td>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-secondary text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-3 py-1.5 rounded-md bg-foreground text-background hover:bg-foreground/90 font-medium text-xs"
-                  >
-                    Generate Token
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-4 text-xs">
-                <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300">
-                  <div className="font-semibold text-xs flex items-center gap-1.5">
-                    <AlertOctagon className="h-4 w-4" />
-                    Important Security Notice
-                  </div>
-                  <p className="mt-1 text-[11px] leading-relaxed">
-                    {generatedResult.warning} This plaintext token will never be stored or shown again in the web console.
-                  </p>
-                </div>
+                    <td className="py-3 px-3">
+                      <Badge variant={m.status === "active" ? "success" : "neutral"}>
+                        {m.status.toUpperCase()}
+                      </Badge>
+                    </td>
 
-                <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Plaintext Token Secret</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={generatedResult.token_plaintext}
-                      className="w-full px-3 py-2 rounded-md border border-border bg-secondary text-foreground font-mono text-[11px]"
-                    />
-                    <button
-                      onClick={() => handleCopy(generatedResult.token_plaintext)}
-                      className="px-3 py-2 rounded-md border border-border bg-secondary hover:bg-secondary/80 text-foreground flex items-center gap-1 font-medium text-xs"
-                    >
-                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copied ? "Copied" : "Copy"}
-                    </button>
-                  </div>
-                </div>
+                    <td className="py-3 px-3 text-muted text-[11px]">
+                      {m.joined_at}
+                    </td>
 
-                <div className="text-[11px] text-muted-foreground space-y-1 bg-secondary/30 p-2.5 rounded border border-border font-mono">
-                  <div><strong>Token ID:</strong> {generatedResult.token_id}</div>
-                  <div><strong>Masked Display:</strong> {generatedResult.masked_token}</div>
-                  <div><strong>Scopes:</strong> {generatedResult.scopes?.join(", ")}</div>
-                </div>
-
-                <div className="flex justify-end pt-3 border-t border-border">
-                  <button
-                    onClick={() => {
-                      setShowModal(false);
-                      setGeneratedResult(null);
-                    }}
-                    className="px-3 py-1.5 rounded-md bg-foreground text-background hover:bg-foreground/90 font-medium text-xs"
-                  >
-                    I Have Saved This Token
-                  </button>
-                </div>
-              </div>
-            )}
+                    <td className="py-3 px-3 text-right">
+                      {m.role !== "owner" && (
+                        <button
+                          onClick={() => setMembers((prev) => prev.filter((x) => x.id !== m.id))}
+                          className="p-1 rounded text-muted hover:text-danger hover:bg-surface-2 transition-colors"
+                          title="Remove member"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
+
+      {/* Tab 2: Roles Matrix */}
+      {activeTab === "roles" && (
+        <div className="rounded-lg border border-border bg-surface-1 p-5 space-y-4 shadow-subtle">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                Role-Based Access Control (RBAC) Permissions Grid
+              </h2>
+              <p className="text-xs text-muted mt-0.5">
+                Exact permissions enforced across the API gateway and frontend views.
+              </p>
+            </div>
+            <Badge variant="neutral">6 Default Roles</Badge>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-center border-collapse">
+              <thead className="bg-surface-2 text-foreground font-medium border-b border-border">
+                <tr>
+                  <th className="py-2.5 px-3 text-left">Action / Capability</th>
+                  <th className="py-2.5 px-2">Owner</th>
+                  <th className="py-2.5 px-2">Admin</th>
+                  <th className="py-2.5 px-2">Red Team</th>
+                  <th className="py-2.5 px-2">Blue Team</th>
+                  <th className="py-2.5 px-2">Auditor</th>
+                  <th className="py-2.5 px-2">Viewer</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {permissionsMatrix.map((p, idx) => (
+                  <tr key={idx} className="hover:bg-surface-2/40">
+                    <td className="py-2.5 px-3 text-left font-medium text-foreground">
+                      {p.permission}
+                    </td>
+                    {(["owner", "admin", "red", "blue", "auditor", "viewer"] as const).map((r) => {
+                      const allowed = p.roles[r];
+                      return (
+                        <td key={r} className="py-2.5 px-2">
+                          {allowed ? (
+                            <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-success/15 text-success">
+                              <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-surface-2 text-muted">
+                              <X className="h-3 w-3" />
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Invariant Policies */}
+      {activeTab === "policies" && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-lg border border-border bg-surface-1 space-y-2">
+            <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Shield className="h-4 w-4 text-accent" />
+              Cryptographic Invariants & Non-Repudiation
+            </div>
+            <p className="text-xs text-muted">
+              These policies cannot be disabled or bypassed by any role, including workspace owners.
+              They are enforced at the cryptographic hypervisor and networking layers.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-lg border border-border bg-surface-1 space-y-2">
+              <span className="text-xs font-semibold text-foreground">1. Zero Early Payload Leakage</span>
+              <p className="text-xs text-muted">
+                Blue team and model guardrails cannot read adversarial payload plaintext while the evaluation is RUNNING.
+                Payload commitment hashes are verified upon conclusion.
+              </p>
+              <Badge variant="success">Hardware & Net Isolated</Badge>
+            </div>
+
+            <div className="p-4 rounded-lg border border-border bg-surface-1 space-y-2">
+              <span className="text-xs font-semibold text-foreground">2. Defense Logic Opacity</span>
+              <p className="text-xs text-muted">
+                Red team operators cannot inspect active heuristic regex weights or defense filter configurations,
+                preventing gradient-free optimization against defenses.
+              </p>
+              <Badge variant="success">Zero Bleed Enforced</Badge>
+            </div>
+
+            <div className="p-4 rounded-lg border border-border bg-surface-1 space-y-2">
+              <span className="text-xs font-semibold text-foreground">3. Gateway Mediation Mandatory</span>
+              <p className="text-xs text-muted">
+                Direct container-to-model packets are unconditionally dropped by Docker iptables. All traffic must pass
+                through the 200ms timing normalizer gateway.
+              </p>
+              <Badge variant="info">Iptables Drop Rules</Badge>
+            </div>
+
+            <div className="p-4 rounded-lg border border-border bg-surface-1 space-y-2">
+              <span className="text-xs font-semibold text-foreground">4. Immutable Audit Non-Repudiation</span>
+              <p className="text-xs text-muted">
+                Audit logs are append-only. Ed25519 digital signatures and SHA-256 Merkle root trees prevent retroactive
+                modification or tampering.
+              </p>
+              <Badge variant="warning">Ed25519 Signed</Badge>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: API Keys */}
+      {activeTab === "keys" && (
+        <div className="rounded-lg border border-border bg-surface-1 overflow-hidden shadow-subtle">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-surface-2 text-muted border-b border-border font-medium">
+                <tr>
+                  <th className="py-2.5 px-3">Key Name</th>
+                  <th className="py-2.5 px-3">Secret Key</th>
+                  <th className="py-2.5 px-3">Assigned Role</th>
+                  <th className="py-2.5 px-3">Created</th>
+                  <th className="py-2.5 px-3">Last Used</th>
+                  <th className="py-2.5 px-3 text-right">Revoke</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {apiKeys.map((k) => (
+                  <tr key={k.id} className="hover:bg-surface-2/60 transition-colors">
+                    <td className="py-3 px-3 font-medium text-foreground">
+                      {k.name}
+                    </td>
+
+                    <td className="py-3 px-3 font-mono text-[11px] text-muted">
+                      {k.maskedKey}
+                    </td>
+
+                    <td className="py-3 px-3">
+                      <Badge variant="neutral">{k.role.toUpperCase()}</Badge>
+                    </td>
+
+                    <td className="py-3 px-3 text-muted text-[11px]">
+                      {k.createdAt}
+                    </td>
+
+                    <td className="py-3 px-3 text-muted text-[11px]">
+                      {k.lastUsed}
+                    </td>
+
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        onClick={() => setApiKeys((prev) => prev.filter((x) => x.id !== k.id))}
+                        className="p-1 rounded text-muted hover:text-danger hover:bg-surface-2"
+                        title="Revoke key"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Recent Denials */}
+      {activeTab === "denials" && (
+        <div className="rounded-lg border border-border bg-surface-1 overflow-hidden shadow-subtle">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-surface-2 text-muted border-b border-border font-medium">
+                <tr>
+                  <th className="py-2.5 px-3">Actor / Service</th>
+                  <th className="py-2.5 px-3">Action Attempted</th>
+                  <th className="py-2.5 px-3">Target Resource</th>
+                  <th className="py-2.5 px-3">Denial Reason</th>
+                  <th className="py-2.5 px-3">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {denials.map((d) => (
+                  <tr key={d.id} className="hover:bg-surface-2/60 transition-colors">
+                    <td className="py-3 px-3 font-mono text-foreground font-medium">
+                      {d.actor}
+                    </td>
+                    <td className="py-3 px-3 font-mono text-[11px] text-danger">
+                      {d.action}
+                    </td>
+                    <td className="py-3 px-3 font-mono text-[11px] text-muted">
+                      {d.target}
+                    </td>
+                    <td className="py-3 px-3 text-muted">
+                      {d.reason}
+                    </td>
+                    <td className="py-3 px-3 text-muted text-[11px]">
+                      {d.time}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Invite Member Modal */}
+      <Modal
+        open={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        title="Invite Teammate to Workspace"
+        description="Send an invitation to join Meridian Safety Labs with a designated role."
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleInvite} className="space-y-4 text-xs">
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">
+              Email Address
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="colleague@company.com"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              className="w-full px-3 py-2 rounded-md bg-surface-2 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">
+              Designated Role
+            </label>
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value)}
+              className="w-full px-3 py-2 rounded-md bg-surface-2 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+            >
+              <option value="viewer">Viewer (Read-only access)</option>
+              <option value="red">Red Team Lead (Adversarial probes, unseal payloads)</option>
+              <option value="blue">Blue Team Lead (Countermeasures, mitigation inspection)</option>
+              <option value="auditor">Auditor (Compliance verification, ledger export)</option>
+              <option value="admin">Admin (Manage members, models, and policies)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setInviteModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
+              Send Invitation
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Create API Key Modal */}
+      <Modal
+        open={createKeyModalOpen}
+        onClose={() => setCreateKeyModalOpen(false)}
+        title={generatedKey ? "API Key Generated" : "Generate New API Key"}
+        description={
+          generatedKey
+            ? "Make sure to copy your API key now. You will not be able to view it again."
+            : "Create a scoped capability token for automated CI/CD runners."
+        }
+        maxWidth="max-w-md"
+      >
+        {generatedKey ? (
+          <div className="space-y-4 text-xs">
+            <div className="space-y-1">
+              <span className="text-[11px] text-muted block">Secret Token:</span>
+              <HashBlock hash={generatedKey} />
+            </div>
+            <div className="p-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-xs">
+              This token has been hashed with Argon2id. Once you close this modal, only the masked string will be preserved.
+            </div>
+            <div className="flex justify-end pt-3 border-t border-border">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setCreateKeyModalOpen(false)}
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleCreateKey} className="space-y-4 text-xs">
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1">
+                Token Name
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Production Jenkins Adversarial Runner"
+                value={keyName}
+                onChange={(e) => setKeyName(e.target.value)}
+                className="w-full px-3 py-2 rounded-md bg-surface-2 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1">
+                Capability Role
+              </label>
+              <select
+                value={keyRole}
+                onChange={(e) => setKeyRole(e.target.value)}
+                className="w-full px-3 py-2 rounded-md bg-surface-2 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+              >
+                <option value="red">Red Team (Submit runs & seal payloads)</option>
+                <option value="blue">Blue Team (Inspect defense logs)</option>
+                <option value="auditor">Auditor (Verify ledger & read-only)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setCreateKeyModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm">
+                Generate Key
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -3,60 +3,113 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 226, 232, 240;
-  --background-start-rgb: 8, 12, 20;
-  --background-end-rgb: 13, 21, 39;
+  /* Dark Theme Default */
+  --bg: #0B0C0F;
+  --surface-1: #111317;
+  --surface-2: #171A1F;
+  --surface-3: #1E2229;
+  --border: #23272E;
+  --border-strong: #2F343D;
+  --text: #ECEEF1;
+  --text-muted: #9097A3;
+  --text-faint: #656C78;
+  --accent: #6E7BF2;
+  --accent-hover: #8390F5;
+  --accent-subtle: rgba(110, 123, 242, 0.12);
+  --success: #3FB68B;
+  --success-subtle: rgba(63, 182, 139, 0.12);
+  --warning: #E2A336;
+  --warning-subtle: rgba(226, 163, 54, 0.12);
+  --danger: #E5534B;
+  --danger-subtle: rgba(229, 83, 75, 0.12);
+  --info: #4C9AFF;
+  --info-subtle: rgba(76, 154, 255, 0.12);
+
+  /* Adversarial team identification */
+  --red-team: #D9667A;
+  --red-team-subtle: rgba(217, 102, 122, 0.12);
+  --blue-team: #5B8DEF;
+  --blue-team-subtle: rgba(91, 141, 239, 0.12);
+}
+
+.light {
+  /* Light Theme */
+  --bg: #FAFAFB;
+  --surface-1: #FFFFFF;
+  --surface-2: #F1F3F6;
+  --surface-3: #E6E8EC;
+  --border: #E6E8EC;
+  --border-strong: #D1D5DB;
+  --text: #14161A;
+  --text-muted: #5B6270;
+  --text-faint: #8A92A0;
+  --accent: #5B68E4;
+  --accent-hover: #4C59DB;
+  --accent-subtle: rgba(91, 104, 228, 0.08);
+  --success: #2A9C74;
+  --success-subtle: rgba(42, 156, 116, 0.08);
+  --warning: #C9881E;
+  --warning-subtle: rgba(201, 136, 30, 0.08);
+  --danger: #D23E36;
+  --danger-subtle: rgba(210, 62, 54, 0.08);
+  --info: #3583E8;
+  --info-subtle: rgba(53, 131, 232, 0.08);
+
+  --red-team: #C24D62;
+  --red-team-subtle: rgba(194, 77, 98, 0.08);
+  --blue-team: #4376DD;
+  --blue-team-subtle: rgba(67, 118, 221, 0.08);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: #070b14;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.07) 0px, transparent 50%);
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  margin: 0;
   overflow-x: hidden;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom cyber security scrollbar */
+/* Numerals tabular-nums by default */
+.tabular-nums, table, [data-tabular] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Clean, quiet scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #080c14;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: var(--border-strong);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--text-faint);
 }
 
-.cyber-panel {
-  background: rgba(13, 21, 39, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(30, 41, 59, 0.8);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+/* Transitions */
+button, a, input, select {
+  transition: all 140ms ease-out;
 }
 
-.cyber-panel-glow {
-  background: rgba(13, 21, 39, 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(6, 182, 212, 0.3);
-  box-shadow: 0 0 25px rgba(6, 182, 212, 0.12);
-}
-
-.cyber-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 9999px;
-  letter-spacing: 0.025em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

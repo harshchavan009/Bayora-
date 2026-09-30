@@ -10,41 +10,63 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#080c14",
-        card: "#0d1527",
-        "card-hover": "#131d36",
-        border: "#1e293b",
-        "border-glow": "rgba(6, 182, 212, 0.3)",
-        cyan: {
-          400: "#22d3ee",
-          500: "#06b6d4",
-          600: "#0891b2",
+        canvas: "var(--bg)",
+        "surface-1": "var(--surface-1)",
+        "surface-2": "var(--surface-2)",
+        "surface-3": "var(--surface-3)",
+        border: "var(--border)",
+        "border-strong": "var(--border-strong)",
+        foreground: "var(--text)",
+        muted: "var(--text-muted)",
+        faint: "var(--text-faint)",
+        accent: {
+          DEFAULT: "var(--accent)",
+          hover: "var(--accent-hover)",
+          subtle: "var(--accent-subtle)",
         },
-        emerald: {
-          400: "#34d399",
-          500: "#10b981",
-          600: "#059669",
+        success: {
+          DEFAULT: "var(--success)",
+          subtle: "var(--success-subtle)",
         },
-        rose: {
-          400: "#fb7185",
-          500: "#f43f5e",
-          600: "#e11d48",
+        warning: {
+          DEFAULT: "var(--warning)",
+          subtle: "var(--warning-subtle)",
         },
-        amber: {
-          400: "#fbbf24",
-          500: "#f59e0b",
-          600: "#d97706",
+        danger: {
+          DEFAULT: "var(--danger)",
+          subtle: "var(--danger-subtle)",
+        },
+        info: {
+          DEFAULT: "var(--info)",
+          subtle: "var(--info-subtle)",
+        },
+        team: {
+          red: "var(--red-team)",
+          "red-subtle": "var(--red-team-subtle)",
+          blue: "var(--blue-team)",
+          "blue-subtle": "var(--blue-team-subtle)",
         },
       },
       fontFamily: {
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        mono: ["JetBrains Mono", "Geist Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
-      animation: {
-        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "glow": "glow 2s ease-in-out infinite alternate",
+      borderRadius: {
+        sm: "4px",
+        DEFAULT: "6px",
+        md: "8px",
+        lg: "10px",
+        xl: "14px",
+        full: "9999px",
+      },
+      boxShadow: {
+        subtle: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        popover: "0 10px 30px -10px rgba(0, 0, 0, 0.3)",
+        modal: "0 20px 40px -15px rgba(0, 0, 0, 0.4)",
       },
     },
   },
   plugins: [],
 };
+
 export default config;

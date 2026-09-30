@@ -28,12 +28,15 @@ from .observability.metrics import (
     redact_defense_for_viewer,
     SystemMetricsCollector
 )
+from .auth.routes import router as auth_router
 
 app = FastAPI(
     title="Bayora AI Safety Validation Platform API",
     description="Secure, isolated red-team / blue-team LLM testing control plane.",
     version="1.0.0"
 )
+
+app.include_router(auth_router)
 
 app.add_middleware(
     CORSMiddleware,

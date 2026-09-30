@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 import { RoleProvider } from "@/components/RoleContext";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Bayora — AI Safety Validation Platform",
-  description: "Enterprise security and validation console for frontier LLM red-teaming and defensive countermeasures.",
+  title: "Bayora — AI Safety & Security Validation Platform",
+  description: "Enterprise security and validation console for frontier LLM red-teaming, defense evaluation, and cryptographic audit proofs.",
 };
 
 export default function RootLayout({
@@ -14,13 +15,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen bg-[#0c1017] text-slate-100 antialiased selection:bg-cyan-500/20 selection:text-cyan-300">
-        <RoleProvider>
-          <AppShell>
-            {children}
-          </AppShell>
-        </RoleProvider>
+    <html lang="en">
+      <body className="min-h-screen bg-canvas text-foreground antialiased selection:bg-accent/20 selection:text-accent">
+        <ThemeProvider>
+          <RoleProvider>
+            <AppShell>
+              {children}
+            </AppShell>
+          </RoleProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
