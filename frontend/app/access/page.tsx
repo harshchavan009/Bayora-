@@ -204,8 +204,8 @@ export default function AccessControlPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-muted-foreground text-[11px]">
-                    <div>{tok.created_at ? new Date(tok.created_at * 1000).toLocaleDateString() : "Just now"}</div>
+                  <td className="py-3 px-4 text-muted-foreground text-[11px]" suppressHydrationWarning>
+                    <div suppressHydrationWarning>{tok.created_at ? new Date(tok.created_at * 1000).toLocaleDateString() : "Just now"}</div>
                     <div className="text-[10px] text-muted-foreground">Expires: +{tok.expires_in_hours || 24}h</div>
                   </td>
                   <td className="py-3 px-4 text-right">
@@ -289,7 +289,7 @@ export default function AccessControlPage() {
                     </span>
                     <span className="text-muted-foreground">→ Action: {d.action}</span>
                   </div>
-                  <span className="text-[11px] text-muted-foreground font-mono">
+                  <span className="text-[11px] text-muted-foreground font-mono" suppressHydrationWarning>
                     {new Date(d.evaluated_at * 1000).toLocaleTimeString()}
                   </span>
                 </div>

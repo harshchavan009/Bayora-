@@ -199,7 +199,7 @@ export default function ObservabilityPage() {
                     <span className="text-foreground font-semibold">{a.rule_name}</span>
                     <span className="text-muted-foreground font-mono text-[11px]">({a.tenant})</span>
                   </div>
-                  <span className="text-[11px] text-muted-foreground font-mono">
+                  <span className="text-[11px] text-muted-foreground font-mono" suppressHydrationWarning>
                     {new Date(a.timestamp * 1000).toLocaleTimeString()}
                   </span>
                 </div>

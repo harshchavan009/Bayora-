@@ -304,7 +304,7 @@ export default function AuditProvenancePage() {
                   </span>
                 </div>
 
-                <span className="text-[11px] font-mono text-muted-foreground">
+                <span className="text-[11px] font-mono text-muted-foreground" suppressHydrationWarning>
                   {new Date(b.timestamp * 1000).toLocaleString(undefined, {
                     timeZoneName: "short",
                   })}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -27,6 +27,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { role, setRole } = useRole();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [utcString, setUtcString] = useState<string>("");
+
+  useEffect(() => {
+    setMounted(true);
+    const updateTime = () => setUtcString(new Date().toISOString().slice(0, 19) + "Z");
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Grouped SaaS navigation
   const navGroups: NavGroup[] = [
@@ -285,7 +295,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-4 text-slate-400">
               <Link href="/threat-model" className="hover:text-slate-300">Threat Model</Link>
               <Link href="/isolation" className="hover:text-slate-300">Isolation Boundaries</Link>
-              <span>Server UTC: {new Date().toISOString().slice(0, 19)}Z</span>
+              <span suppressHydrationWarning>Server UTC: {mounted ? (utcString || "2026-09-30T18:38:00Z") : "2026-09-30T18:38:00Z"}</span>
             </div>
           </div>
         </footer>
